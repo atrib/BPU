@@ -1,0 +1,7 @@
+*.swp
+*.o
+core
+core.*
+*.pyc
+results.json
+/doc
