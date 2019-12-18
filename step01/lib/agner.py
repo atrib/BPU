@@ -89,7 +89,7 @@ def run_test(test, counters, init_once="", init_each="", repetitions=3, procs=1)
         init_f.write(init_each)
 
     subprocess.check_call([
-        "nasm", "-f", "elf64", 
+        "nasm", "-f", "elf64", "-O0",
         "-l", "out/b64.lst",
         "-I", "out/",
         "-o", "out/b64.o",

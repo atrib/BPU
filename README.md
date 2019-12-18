@@ -8,12 +8,11 @@ The tools in the repo are based on [Matt Gobolt's tools](https://github.com/matt
 
 **This was setup on Ubuntu 18.04, for another environment, adapt the commands**
 
-Install required packages (`matplotlib` and `TODO: find which one`) on the root python install as the script needs to be run as sudo
+Install required package (`matplotlib`) on the root python install as the script needs to be run as sudo
 
 ```bash
 sudo su
 pip install matplotlib
-pip install XXX
 exit
 ```
 
@@ -111,7 +110,10 @@ Objectives of each step:
 ### Step00
 
 - Get [Matt Godbolt's tools](https://github.com/mattgodbolt/agner) to work on my own laptop (Broadwell: i7-5600U)
+
 - Compare results with his and see if they are similar and what is expected
+
+  
 
 ### Step01
 
@@ -126,4 +128,48 @@ Objectives of each step:
 
 - Building eviction sets (with various jumps until the buffer is full and we start seeing evictions). [Documentation](https://arxiv.org/abs/1810.01497)
 
+- Expand on Gobolt's tests and push the analysis further
+
   
+
+### Step02
+
+**Additional Performance registers**
+
+Check and try to use additional performance registers from Intel (see [documentation](http://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3b-part-2-manual.pdf)) to see if they could be useful in our reverse-engineering effort.
+
+Write some small test cases where we would expect a specific behavior to make sure that the counters do work and are readable correctly and not that we receive a 0 no matter what.
+
+**Reset BTB**
+
+Write some code that shuffles, floods or resets the BTB so that at each run, we have a pseudo-random content in the BTB. We should at least be able to avoid having our previous branches cached.
+
+Alternatively, one could reboot his system as the power loss will result in an empty cache but it is inconvenient and time consuming as the driver needs to be reloaded each time.
+
+**Retro-compatibility**
+
+Added the performance register `BrMispredict` to the step01 code
+
+
+
+### Step03
+
+Write several benchmarks and/or test scenarios with the following elements and try to get a better understanding of how the algorithm works:
+
+- only conditional branches
+- only unconditional branches
+- dummy branches that will never be taken (they should not appear in the BTB)
+- bogus branches and their effect: elements in the BTB that are not branches
+- forward branches (covered in the only unconditional branches)
+- backward branches -> loops
+- Indirect branches (not on address but on register value)
+
+See [Vladimir Uzelac's Master thesis](http://www.ece.uah.edu/~milenka/docs/VladimirUzelac.thesis.pdf) for some useful insight (older architecture but the approach should be helpful)
+
+Try more precise tests with new performance registers!
+
+
+
+### Step04
+
+Run various test on a Skylake CPU (i7-6700k) and see if the results are similar to the Broadwell ones or if they differ and try to explain why.

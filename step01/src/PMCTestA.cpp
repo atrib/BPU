@@ -379,24 +379,48 @@ void CCounters::GetProcessorFamily() {
 
     if (MVendor == INTEL)  {
         // Intel processor
-        if (Family <  5)    MFamily = P_UNKNOWN;        // less than Pentium
-        if (Family == 5)    MFamily = INTEL_P1MMX;      // pentium 1 or mmx
-        if (Family == 0x0F) MFamily = INTEL_P4;         // pentium 4 or other netburst
-        if (Family == 6) {                              // P6 family and later
-            // check model
-            MFamily = INTEL_P23;                         // Pentium 2 or 3
-            if (Model == 0x09) MFamily = INTEL_PM;       // Pentium M
-            if (Model == 0x0D) MFamily = INTEL_PM;       // Pentium M
-            if (Model == 0x0E) MFamily = INTEL_CORE;     // Core 1
-            if (Model == 0x0F) MFamily = INTEL_CORE2;    // Core 2, 65 nm
-            if (Model == 0x16) MFamily = INTEL_CORE2;    // Core 2, 65 nm celeron
-            if (Model == 0x17) MFamily = INTEL_CORE2;    // Core 2, 45 nm
-            if (Model == 0x1A) MFamily = INTEL_7;        // Core i7, Nehalem
-            if (Model == 0x1C) MFamily = INTEL_ATOM;     // Atom
-            if (Model >= 0x1D) MFamily = INTEL_7;        // Nehalem, Sandy Bridge
-            if (Model == 0x3A) MFamily = INTEL_IVY;      // Ivy Bridge
-            if (Model == 0x3E) MFamily = INTEL_IVY;      // Ivy Bridge (e.g. E5-2667 v2)
-            if (Model >= 0x3F) MFamily = INTEL_HASW;     // Haswell
+        if (Family <  5)    MFamily = PRUNKNOWN;           // less than Pentium
+        if (Family == 5)    MFamily = INTEL_P1MMX;         // pentium 1 or mmx
+        if (Family == 0x0F) MFamily = INTEL_P4;            // pentium 4 or other netburst
+        if (Family == 6) {
+            switch(Model) {  // list of known Intel families with different performance monitoring event tables
+            case 0x09:  case 0x0D:
+                MFamily = INTEL_PM;  break;                // Pentium M
+            case 0x0E: 
+                MFamily = INTEL_CORE;  break;              // Core 1
+            case 0x0F: case 0x16: 
+                MFamily = INTEL_CORE2;  break;             // Core 2, 65 nm
+            case 0x17: case 0x1D:
+                MFamily = INTEL_CORE2;  break;             // Core 2, 45 nm
+            case 0x1A: case 0x1E: case 0x1F: case 0x2E:
+                MFamily = INTEL_7;  break;                 // Nehalem
+            case 0x25: case 0x2C: case 0x2F:
+                MFamily = INTEL_7;  break;                 // Westmere
+            case 0x2A: case 0x2D:
+                MFamily = INTEL_IVY;  break;               // Sandy Bridge
+            case 0x3A: case 0x3E:
+                MFamily = INTEL_IVY;  break;               // Ivy Bridge
+            case 0x3C: case 0x3F: case 0x45: case 0x46:
+                MFamily = INTEL_HASW;  break;              // Haswell
+            case 0x3D: case 0x47: case 0x4F: case 0x56:
+                MFamily = INTEL_HASW;  break;              // Broadwell
+            case 0x5E: case 0x55:
+                MFamily = INTEL_SKYL;  break;              // Skylake
+            // low power processors:
+            case 0x1C: case 0x26: case 0x27: case 0x35: case 0x36:
+                MFamily = INTEL_ATOM;  break;              // Atom
+            case 0x37: case 0x4A: case 0x4D:
+                MFamily = INTEL_SILV;  break;              // Silvermont
+            case 0x5C: case 0x5F: case 0x7A:
+                MFamily = INTEL_GOLDM;  break;             // Goldmont                
+            case 0x57:
+                MFamily = INTEL_KNIGHT; break;             // Knights Landing
+            // unknown and future
+            default:
+                MFamily = INTEL_P23;                       // Pentium 2 or 3
+                if (Model >= 0x3C) MFamily = INTEL_HASW;   // Haswell
+                if (Model >= 0x5E) MFamily = INTEL_SKYL;   // Skylake
+            }
         }
     }
 
@@ -933,6 +957,49 @@ SCounterDefinition CounterDefinitions[] = {
     {400, S_ID3,  INTEL_HASW, 0,  3,     0,   0xa7,     0x01,  "BaClrFIq"  }, // MG added
     {403, S_ID3,  INTEL_HASW, 0,  3,     0,   0xe8,     0x01,  "BaClrEly"  }, // MG added
     {404, S_ID3,  INTEL_HASW, 0,  3,     0,   0xe8,     0x02,  "BaClrL8"  }, // MG added
+    // Markus
+    {500, S_ID3,  INTEL_HASW, 0,  3,     0,   0x8a,     0x00,  "BrMispDec"  },
+    {501, S_ID3,  INTEL_HASW, 0,  3,     0,   0xe2,     0x00,  "BtbMiss"  },
+    {502, S_ID3,  INTEL_HASW, 0,  3,     0,   0xe4,     0x00,  "BrBogus"  },
+    {503, S_ID3,  INTEL_HASW, 0,  3,     0,   0xe6,     0x00,  "BaClears"  },
+
+    // Skylake
+    // The first three counters are fixed-function counters having their own register,
+    // The rest of the counters are competing for the same four counter registers.
+    // id   scheme  cpu       countregs eventreg event  mask   name
+    {1,   S_ID4,  INTEL_SKYL, 0x40000001,  0,0,   0,     0,   "Core cyc"   }, // core clock cycles
+    {2,   S_ID4,  INTEL_SKYL, 0x40000002,  0,0,   0,     0,   "Ref cyc"    }, // Reference clock cycles
+    {9,   S_ID4,  INTEL_SKYL, 0x40000000,  0,0,   0,     0,   "Instruct"   }, // Instructions (reference counter)
+    {10,  S_ID4,  INTEL_SKYL, 0,  3,     0,   0xc0,     0x01, "Instruct"   }, // Instructions
+    {22,  S_ID4,  INTEL_SKYL, 0,  3,     0,   0x87,     0x01, "ILenStal"   }, // instruction length decoder stall due to length changing prefix
+    {24,  S_ID4,  INTEL_SKYL, 0,  3,     0,   0xA8,     0x01, "Loop uops"  }, // uops from loop stream detector
+    {25,  S_ID4,  INTEL_SKYL, 0,  3,     0,   0x79,     0x04, "Dec uops"   }, // uops from decoders. (MITE = Micro-instruction Translation Engine)
+    {26,  S_ID4,  INTEL_SKYL, 0,  3,     0,   0x79,     0x08, "Cach uops"  }, // uops from uop cache. (DSB = Decoded Stream Buffer)
+    {100, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xc2,     0x01, "Uops"       }, // uops retired, unfused domain
+    {104, S_ID4,  INTEL_SKYL, 0,  3,     0,   0x0e,     0x01, "uops RAT"   }, // uops from RAT to RS
+    {111, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa2,     0x01, "res.stl."   }, // any resource stall
+    {131, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xC1,     0x18, "AVX trans"  }, // VEX - non-VEX transition penalties
+    {150, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa1,     0x01, "uop p0"     }, // uops port 0.
+    {151, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa1,     0x02, "uop p1"     }, // uops port 1.
+    {152, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa1,     0x04, "uop p2"     }, // uops port 2.
+    {153, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa1,     0x08, "uop p3"     }, // uops port 3.
+    {154, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa1,     0x10, "uop p4"     }, // uops port 4.
+    {155, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa1,     0x20, "uop p5"     }, // uops port 5.
+    {156, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa1,     0x40, "uop p6"     }, // uops port 6.
+    {157, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa1,     0x80, "uop p7"     }, // uops port 7.
+    {160, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xa1,     0xFF, "uop p07"    }, // uops port 0-7
+    {201, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xC4,     0x20, "BrTaken"    }, // branches taken
+    {207, S_ID4,  INTEL_SKYL, 0,  3,     0,   0xC5,     0x00, "BrMispred"  }, // mispredicted branches
+    {220, S_ID4,  INTEL_SKYL, 0,  3,     0,   0x58,     0x03, "Mov elim"   }, // register moves eliminated
+    {221, S_ID4,  INTEL_SKYL, 0,  3,     0,   0x58,     0x0C, "Mov elim-"  }, // register moves elimination unsuccessful
+    {310, S_ID4,  INTEL_SKYL, 0,  3,     0,   0x80,     0x02, "CodeMiss"   }, // code cache misses
+    {311, S_ID4,  INTEL_SKYL, 0,  3,     0,   0x24,     0xe1, "L1D Miss"   }, // level 1 data cache miss
+    {320, S_ID4,  INTEL_SKYL, 0,  3,     0,   0x24,     0x27, "L2 Miss"    }, // level 2 cache misses
+    // Added by Markus, not sure if they exist really, doc is unclear...
+    {410, S_ID3,  INTEL_SKYL, 0,  3,     0,   0xe6,     0x1f, "BaClrAny"  },
+    {400, S_ID3,  INTEL_SKYL, 0,  3,     0,   0xa7,     0x01,  "BaClrFIq"  },
+    {403, S_ID3,  INTEL_SKYL, 0,  3,     0,   0xe8,     0x01,  "BaClrEly"  },
+    {404, S_ID3,  INTEL_SKYL, 0,  3,     0,   0xe8,     0x02,  "BaClrL8"  },
 
     // Intel Atom:
     // The first counter is fixed-function counter having its own register,
